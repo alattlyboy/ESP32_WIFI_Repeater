@@ -2,7 +2,7 @@
 # ESP32_WIFI_Repeater
 一个关于ESP32_S3和ESP32_C5 的WIFI_Repeater  
 =======
-# ESP32-S3 + ESP32-C5 双芯片 WiFi 中继器 · 2.2
+# ESP32-S3 + ESP32-C5 双芯片 WiFi 中继器
 
 手机连 S3 的 2.4G 热点上网；C5 负责连上级路由的 5G 或 2.4G（含**校园网：802.1X / 开放网 Portal / 普通密码**）。两者用 7 根杜邦线（SPI）连起来，中间传的是以太网帧。
 
