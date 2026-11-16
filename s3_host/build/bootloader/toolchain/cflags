@@ -1,0 +1,5 @@
+"-specs=C:/wifi/frontend2.0/s3_host/build/bootloader/specs/picolibc.specs"
+-mlongcalls
+-fno-builtin-memcpy
+-fno-builtin-memset
+-fno-builtin-bzero

@@ -1,0 +1,9 @@
+
+
+# Load bootloader symbols
+set confirm off
+    add-symbol-file C:/wifi/frontend2.0/c5_slave/build/bootloader/bootloader.elf
+set confirm on
+
+# Load application symbols
+file C:/wifi/frontend2.0/c5_slave/build/esp32_c5_coprocessor.elf

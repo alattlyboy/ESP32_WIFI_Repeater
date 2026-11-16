@@ -1,0 +1,9 @@
+dependencies:
+  idf:
+    version: ">=6.0"
+  espressif/esp_hosted:
+    version: "*"
+  espressif/esp_wifi_remote:
+    version: "*"
+  espressif/cjson:
+    version: "*"

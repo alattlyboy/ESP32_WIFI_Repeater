@@ -1,0 +1,3 @@
+-march=rv32imac_zicsr_zifencei_zaamo_zalrsc
+-mtune=esp-base
+"-specs=C:/wifi/frontend2.0/c5_slave/build/specs/picolibc.specs"

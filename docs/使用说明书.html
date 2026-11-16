@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32 双频中继器 · 使用说明书</title>
+<style>
+:root{
+  --tx:#1a1f2b; --mut:#5d6577; --line:#e3e8f0; --card:#fff; --bg:#f6f8fc;
+  --acc:#2f6fe4; --ok:#0f9d68; --warn:#b57608; --err:#cf2d3d;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--tx);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;
+  font-size:15px;line-height:1.75;
+}
+.wrap{max-width:860px;margin:0 auto;padding:32px 20px 80px}
+header.cover{
+  background:linear-gradient(135deg,#1b2a44,#243d63);color:#fff;
+  border-radius:18px;padding:34px 30px;margin-bottom:26px;
+}
+header.cover h1{margin:0 0 8px;font-size:26px;letter-spacing:.5px}
+header.cover p{margin:0;color:#b9c9e4;font-size:14px}
+header.cover .tags{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+header.cover .tags span{
+  font-size:12px;padding:4px 10px;border-radius:999px;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+}
+h2{
+  font-size:19px;margin:38px 0 14px;padding-left:12px;
+  border-left:4px solid var(--acc);
+}
+h3{font-size:15px;margin:22px 0 8px}
+p{margin:8px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0}
+.note{border-left:3px solid var(--warn);background:#fffaf0;border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;font-size:14px}
+.danger{border-left:3px solid var(--err);background:#fff5f5;border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;font-size:14px}
+.ok{border-left:3px solid var(--ok);background:#f3fbf7;border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;font-size:14px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f0f4fa;font-weight:600;font-size:13px;color:var(--mut)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;background:#eef2f8;padding:2px 6px;border-radius:5px}
+pre{background:#111823;color:#d7e2f0;padding:14px 16px;border-radius:10px;overflow:auto;font-size:13px;line-height:1.6}
+pre code{background:none;color:inherit;padding:0}
+img.diagram{width:100%;border-radius:12px;border:1px solid #1b2433;display:block;margin:16px 0}
+ol,ul{padding-left:22px;margin:8px 0}
+li{margin:5px 0}
+.kbd{display:inline-block;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:0 6px;font-size:13px;background:#fff}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;font-size:13px}
+.flow span{background:#eef3fb;border:1px solid #d7e2f4;border-radius:8px;padding:6px 10px}
+.flow i{color:var(--mut);font-style:normal}
+footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
+@media print{
+  body{background:#fff;font-size:12pt}
+  .wrap{max-width:none;padding:0}
+  header.cover{background:#1b2a44 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  h2{page-break-after:avoid}
+  .card,.note,.danger,.ok{page-break-inside:avoid}
+  pre{white-space:pre-wrap;word-break:break-all}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <h1>ESP32 双频中继器 · 使用说明书</h1>
+  <p>ESP32-C5 收 5GHz 回程 · ESP32-S3 发 2.4GHz 热点 · SPI 互联 · 单层 NAT</p>
+  <div class="tags">
+    <span>固件 2.2</span><span>ESP-IDF 6.1</span><span>支持 802.1X / 开放网 Portal</span><span>ESP32-S3 N16R8 + ESP32-C5</span>
+  </div>
+</header>
+
+<h2>一、这是什么</h2>
+<p>这是一台用两块 ESP32 搭出来的 WiFi 中继器：<b>一块负责"收"（连上级路由的 5GHz），一块负责"发"（给自己的设备开 2.4GHz 热点）</b>。两者用 7 根杜邦线连起来，中间跑的是以太网帧。</p>
+
+<div class="flow">
+  <span>手机 / IoT</span><i>──2.4G 空口──▶</i>
+  <span>ESP32-S3<br>热点 + NAT + 网页</span><i>──SPI 7 线──▶</i>
+  <span>ESP32-C5<br>连上级 WiFi</span><i>──5G 空口──▶</i>
+  <span>上级路由器</span>
+</div>
+
+<h3>为什么不能只用一块板做无线中继</h3>
+<p>因为 <b>ESP32-C5 是单射频</b>：STA 连上 5GHz 后，它自己开的热点也只能在 5GHz；而 <b>ESP32-S3 只有 2.4GHz</b>，连不上 5GHz 的热点。所以"5G 收 + 2.4G 发"必须靠有线把流量过给另一颗芯片。</p>
+<p>顺带得到一个好处：<b>热点信道和上行信道彻底解耦</b>。2.4G 热点可以钉死在最干净的信道，不会因为上级路由换信道而把客户端全体踢下线。</p>
+
+<h2>二、你需要准备</h2>
+<table>
+  <tr><th>物料</th><th>要求</th><th>说明</th></tr>
+  <tr><td>ESP32-S3 开发板</td><td>N16R8（16MB Flash + 8MB PSRAM）</td><td>ESP32-S3-DevKitC-1 即可</td></tr>
+  <tr><td>ESP32-C5 开发板</td><td>任意 C5 开发板</td><td>推荐带外置天线接口的版本，5G 对天线敏感</td></tr>
+  <tr><td>杜邦线</td><td>7 根信号 + 2 根地，≤10cm</td><td>太长会随机丢包</td></tr>
+  <tr><td>USB 线 / 电源</td><td>两根，各自供电</td><td>不要用一块板给另一块供电</td></tr>
+  <tr><td>电脑</td><td>Windows / macOS / Linux</td><td>只用来刷固件，日常使用不需要</td></tr>
+</table>
+
+<h2>三、接线（关键，先看这张图）</h2>
+<img class="diagram" src="接线图.svg" alt="ESP32-S3 与 ESP32-C5 接线图">
+
+<div class="danger">
+  <b>三条最容易翻车的规则</b>
+  <ol>
+    <li><b>同名相接，不要交叉。</b>MOSI 接 MOSI、MISO 接 MISO。SPI 不是串口，交叉会直接连不上。</li>
+    <li><b>只共地，不共电源。</b>两块板各自插 USB。用一块板的 3V3 给另一块供电，会在 WiFi 发射瞬间掉压重启。</li>
+    <li><b>GND 至少接 2 根。</b>只接一根地线，SPI 很容易误码（表现为能连上但随机丢包）。</li>
+  </ol>
+</div>
+
+<table>
+  <tr><th>信号</th><th>ESP32-S3</th><th>ESP32-C5</th><th>作用</th></tr>
+  <tr><td>CLK</td><td>GPIO12</td><td>GPIO3</td><td>SPI 时钟</td></tr>
+  <tr><td>MOSI</td><td>GPIO11</td><td>GPIO7</td><td>S3 → C5 数据</td></tr>
+  <tr><td>MISO</td><td>GPIO13</td><td>GPIO2</td><td>C5 → S3 数据</td></tr>
+  <tr><td>CS</td><td>GPIO10</td><td>GPIO10</td><td>片选</td></tr>
+  <tr><td>HANDSHAKE</td><td>GPIO17</td><td>GPIO1</td><td>握手 / 中断</td></tr>
+  <tr><td>DATA READY</td><td>GPIO4</td><td>GPIO4</td><td>数据就绪</td></tr>
+  <tr><td>RESET</td><td>GPIO42</td><td>EN</td><td>S3 复位 C5</td></tr>
+  <tr><td>GND</td><td>GND</td><td>GND</td><td>共地 ×2~3</td></tr>
+</table>
+
+<div class="note">
+  上电顺序建议：<b>先给 C5，再给 S3</b>。C5 的 GPIO2/3/4 里有 strapping 脚，如果 C5 起不来，先拔掉这几根线看是否恢复——恢复了说明是上电瞬间电平问题，不是板子坏了。
+</div>
+
+<h2>四、刷固件</h2>
+<p>出厂已编译好的整片镜像在 <code>dist/</code> 目录，<b>一次写完就能跑</b>，不需要装 ESP-IDF。</p>
+
+<table>
+  <tr><th>文件</th><th>芯片</th><th>烧录地址</th><th>大小</th></tr>
+  <tr><td><code>s3_host_merged.bin</code></td><td>ESP32-S3</td><td><code>0x0</code></td><td>约 1.1 MB</td></tr>
+  <tr><td><code>c5_slave_merged.bin</code></td><td>ESP32-C5</td><td><code>0x0</code></td><td>约 1.2 MB</td></tr>
+</table>
+
+<h3>方法 A：命令行（推荐）</h3>
+<pre><code># 插上 S3，在设备管理器里看是 COM 几
+esptool --chip esp32s3 -p COM5 -b 460800 write-flash 0x0 dist\s3_host_merged.bin
+
+# 拔下 S3，插上 C5
+esptool --chip esp32c5 -p COM6 -b 460800 write-flash 0x0 dist\c5_slave_merged.bin</code></pre>
+<p>需要先装 esptool：<code>pip install esptool</code>。用 esptool 5.x 时命令名是 <code>esptool</code>，旧版写 <code>esptool.py</code>。</p>
+
+<h3>方法 B：用附带脚本</h3>
+<pre><code>powershell -ExecutionPolicy Bypass -File tools\flash.ps1 -Port 5 -Target s3
+powershell -ExecutionPolicy Bypass -File tools\flash.ps1 -Port 6 -Target c5</code></pre>
+
+<div class="note">
+  板子上有两个 USB 口时，选标着 <b>UART / COM</b> 的那个（不是 USB-OTG）。<br>
+  刷不进去就：按住 <span class="kbd">BOOT</span>，点一下 <span class="kbd">RST</span>，松开 BOOT，再执行命令。
+</div>
+
+<h2>五、第一次配网</h2>
+<ol>
+  <li>两块板都上电（先 C5 后 S3）。等约 5 秒。</li>
+  <li>手机搜 WiFi，连 <b>ESP32-NAT</b>，密码 <b>12345678</b>。</li>
+  <li>浏览器打开 <b>http://192.168.4.1</b>。</li>
+  <li>点「扫描」，列表 1~2 秒就出来。<b>扫描时上行会短暂断开，属正常。</b></li>
+  <li>点你要连的那个网络，SSID 会自动填进输入框（企业级网络还会自动把认证方式切成 802.1X）。</li>
+  <li>家用路由：填密码即可。校园网/公司网：见下面第五·二节。</li>
+  <li>要 5G 回程就把「上行频段」选成「只用 5GHz」；不确定选「自动」。</li>
+  <li>点「保存并重启」，等 15 秒，页面顶部徽标变成绿色「已联网」。</li>
+</ol>
+
+<div class="ok">
+  <b>判断成功的三个标志</b>
+  <ol>
+    <li>徽标显示 <b>已联网</b>（绿色）</li>
+    <li>卡片里「上级 IP」不是 <code>--</code>，是形如 192.168.x.y 的地址</li>
+    <li>手机上网正常，且「频段」显示 5GHz（说明走的是 5G 回程）</li>
+  </ol>
+</div>
+
+<h3>五·二、校园网 / 公司网：先判断是哪种</h3>
+<p><b>「校园网」是场景，「认证方式」是 802.11 这一层要不要密码 —— 两件事，别混。</b>
+同一个学校，教学楼可能是开放网、宿舍可能是 802.1X、实验室可能是普通密码。
+判断只看手机连它时的表现：</p>
+<table>
+  <tr><th>手机连它的时候</th><th>网页里选这个</th></tr>
+  <tr><td>不用输密码就连上，随后浏览器<b>自动弹登录页</b></td><td><b>开放网络（网页认证 Portal）</b></td></tr>
+  <tr><td>连的时候<b>系统弹窗</b>要用户名 + 密码</td><td>校园网 / 企业版 802.1X</td></tr>
+  <tr><td>要输一个<b>固定 WiFi 密码</b></td><td>密码</td></tr>
+</table>
+<div class="danger">
+  <b>最常见的错误：</b>把「开放网络」当成「企业版」来连。STA 会拿企业级安全去匹配一个开放 AP，
+  直接 <code>reason 210</code>（安全不兼容）。<b>这不是密码错，是模式选错。</b>
+</div>
+
+<h4>情况 A：开放网络 + 网页认证</h4>
+<p>认证方式选「开放网络（网页认证 Portal）」，<b>不用填 WiFi 密码</b>，保存重启即可。
+连上后上行 IP 一般是 <code>10.x.x.x</code> 这种内网地址，属正常。</p>
+<p>如果打开网页被跳到学校登录页：随便用一台连着你热点的手机/电脑，在门户页用学号登录一次就行。
+所有客户端经 NAT 出去都是设备这一个 IP，门户放行这个 IP 后，<b>全部设备一起能上网</b>。</p>
+<div class="note">
+  设备本身没有浏览器，登不了门户页 —— 这一步必须由连在热点上的设备完成，一次即可。
+  本固件不会自动填门户表单（各校门户协议自研、带验证码，硬编码只会到处失败）。
+</div>
+
+<h4>情况 B：企业版 802.1X</h4>
+<p>如果连的时候是系统弹窗要账号密码，按下面填：</p>
+<table>
+  <tr><th>字段</th><th>怎么填</th></tr>
+  <tr><td>认证方式</td><td>选「校园网 / 企业版 802.1X」</td></tr>
+  <tr><td>EAP 方法</td><td><b>PEAP</b>（绝大多数学校）；不行再试 TTLS</td></tr>
+  <tr><td>TTLS 内层</td><td>MSCHAPv2（只有选 TTLS 才用得上）</td></tr>
+  <tr><td>用户名</td><td><b>学号 / 工号</b>，一般不带 @ 后缀（按学校说明）</td></tr>
+  <tr><td>密码</td><td>上网密码（不是校园网门户的验证码）</td></tr>
+  <tr><td>匿名身份</td><td>留空；学校要求时填 <code>anonymous</code></td></tr>
+  <tr><td>服务器证书</td><td>选「不校验」。学校多是自签证书，选校验会一直失败</td></tr>
+  <tr><td>DNS</td><td>选「自定义」，填学校给的 DNS（校园网常屏蔽 8.8.8.8 这类公共 DNS）</td></tr>
+</table>
+<div class="note">
+  <b>还是连不上？</b>看网页「上行网络」下面那行提示，它会直接告诉你原因：<br>
+  「四次握手超时」→ 密码错；「认证失败」→ 用户名或密码错；<br>
+  「找不到这个 WiFi」→ SSID 拼错或频段选错；「安全模式不匹配」→ 该选「开放网络」。
+</div>
+<div class="danger">
+  <b>关于「TLS（客户端证书）」：</b>本固件暂不支持上传证书文件。学校要求装证书才能上网的（少数），请改用「电脑开热点共享」的方案。
+</div>
+
+<h2>六、界面说明</h2>
+<table>
+  <tr><th>区域</th><th>说明</th></tr>
+  <tr><td>顶部徽标</td><td>已联网 / 正在连接 / 待配置 / C5 未就绪 / 设备无响应</td></tr>
+  <tr><td>上行网络卡片</td><td>当前连的上级 SSID、信号强度柱、实时信号曲线（最近 2 分钟）、频段与信道、上级分配的 IP</td></tr>
+  <tr><td>四个指标</td><td>在线客户端数、运行时长、空闲内存、本机热点信道</td></tr>
+  <tr><td>已连接设备</td><td>连在你热点上的设备，显示 MAC、信号、协议（11n / 11g / 11b）</td></tr>
+  <tr><td>选择上行 WiFi</td><td>扫描并一键填入。列表里蓝色标签 = 5GHz 网络</td></tr>
+  <tr><td>上行设置</td><td>SSID / 频段 / <b>认证方式</b>（密码 / 802.1X / 开放 Portal）/ 密码；企业版还会展开 EAP 方法、用户名、匿名身份、证书校验</td></tr>
+  <tr><td>热点设置</td><td>热点 SSID / 密码 / 信道 / <b>DNS</b>（跟随上级 or 自定义）。密码留空表示不修改</td></tr>
+  <tr><td>上行网络下面的小字</td><td>人话状态：已联网 / 正在等 IP / 连不上＋具体原因（密码错、找不到、需要企业版…）</td></tr>
+  <tr><td>维护</td><td>重启设备、恢复出厂</td></tr>
+</table>
+
+<h3>徽标状态对照</h3>
+<table>
+  <tr><th>显示</th><th>含义</th><th>怎么办</th></tr>
+  <tr><td>已联网</td><td>一切正常</td><td>—</td></tr>
+  <tr><td>正在连接</td><td>已配置上行，但还没连上</td><td>等 15 秒；仍不行看「选择上行 WiFi」里信号是否太弱</td></tr>
+  <tr><td>待配置</td><td>还没设置上级 WiFi</td><td>走第五节的配网流程</td></tr>
+  <tr><td>C5 未就绪</td><td>S3 联系不上 C5</td><td>查 SPI 接线、C5 供电、C5 是否刷了从机固件</td></tr>
+  <tr><td>设备无响应</td><td>网页 4 秒内拿不到状态</td><td>设备在重启或卡住，断电重来</td></tr>
+</table>
+
+<h2>七、恢复出厂</h2>
+<ul>
+  <li><b>网页</b>：「维护」→「恢复出厂」，需要点两次确认。</li>
+  <li><b>按键</b>：长按板载 <span class="kbd">BOOT</span> 键 5 秒，串口会先提示"继续按住 2 秒将恢复出厂"。</li>
+</ul>
+<p>恢复后热点变回 <b>ESP32-NAT / 12345678</b>，需要重新配网。</p>
+
+<h2>八、性能预期</h2>
+<table>
+  <tr><th>项目</th><th>实测范围</th><th>说明</th></tr>
+  <tr><td>端到端吞吐</td><td>8~15 Mbps</td><td>瓶颈在 SPI 隧道和 2.4G 空口，不在 5G 回程</td></tr>
+  <tr><td>延迟</td><td>3~10 ms（局域网）</td><td>比直接用上级路由多一跳</td></tr>
+  <tr><td>客户端数</td><td>建议 ≤ 8</td><td>RAM 限制，超过后容易掉线</td></tr>
+  <tr><td>覆盖</td><td>2.4G 常规覆盖</td><td>换算成面积约一层楼</td></tr>
+</table>
+<div class="note">
+  <b>5GHz 的价值不是更快，而是更稳。</b>它的抗干扰、低延迟、上行余量更好，但因为最终出口还是 2.4G 热点，别指望跑满宽带。想要更高速度，得让 C5 也开 5G 热点（单射频时分复用，吞吐减半）或再加一块 C5。
+</div>
+
+<h2>九、常见问题</h2>
+<table>
+  <tr><th>现象</th><th>原因 / 处理</th></tr>
+  <tr><td>网页一直「读取中」</td><td>1.0 的旧 bug 已修。确认刷的是 <code>dist/s3_host_merged.bin</code>（2.0），并强制刷新浏览器（Ctrl+F5）</td></tr>
+  <tr><td>扫描列表是空的</td><td>HANDSHAKE / DATA READY 接反，或 C5 没上电。对照接线图逐根查</td></tr>
+  <tr><td>徽标「C5 未就绪」</td><td>SPI 接线、C5 供电、C5 固件三选一。看 S3 串口有没有 <code>remote wifi ready</code></td></tr>
+  <tr><td>连上了但没网</td><td>看「上级 IP」是不是 <code>--</code>，以及上行网络下面那行提示：<br>
+    ① <b>IP 是 --</b> → 上行没连上（看原因：密码错 / 找不到 / 需要企业版）<br>
+    ② <b>IP 有了但打不开网页</b> → 多半是 DNS。把 DNS 改成「自定义」填 223.5.5.5 试试<br>
+    ③ <b>手机显示"已连接但无法上网"</b> → 手机缓存了旧配置，在手机上「忘记此网络」重连一次</td></tr>
+  <tr><td>显示「四次握手超时」</td><td>密码错了，或者这是校园网（要切到 802.1X 认证方式）</td></tr>
+  <tr><td>显示「需要企业版认证」</td><td>这个网络是 WPA2-Enterprise，认证方式要选 802.1X 并填用户名密码</td></tr>
+  <tr><td>提示「C5 协处理器未就绪」</td><td>SPI 接线 / C5 供电 / C5 固件。看 S3 串口有没有 <code>remote wifi ready</code></td></tr>
+  <tr><td>能开网页但很慢</td><td>信号弱。挪位置，让 RSSI 高于 -70dBm</td></tr>
+  <tr><td>偶发丢包、ping 抖动</td><td>SPI 线太长。剪短、多接地，或在 sdkconfig 把 SPI 降到 10MHz 重编</td></tr>
+  <tr><td>C5 反复重启</td><td>供电不足。C5 单独插 USB，不要从 S3 取电</td></tr>
+  <tr><td>改了热点密码连不上</td><td>手机记着旧密码。在手机上「忘记此网络」再重连</td></tr>
+</table>
+
+<h2>十、注意事项</h2>
+<ul>
+  <li>本设备是 <b>NAT 路由器</b>，手机拿到的 IP 是 192.168.4.x，和上级网段不同。要在局域网里互访，需要在上级路由上做端口映射，或把本机改成桥接模式（本固件不支持）。</li>
+  <li>网页没有登录密码，因为默认只有连在热点内网才能访问。公共场所使用请务必设置热点密码。</li>
+  <li>扫描 WiFi 会让上行短暂断开 1~2 秒，属于单射频的物理限制。</li>
+  <li>本机<b>不做 VPN 客户端</b>（WireGuard 需要你自己的服务端，且吞吐只有 2~6Mbps）。要翻墙/回校内的，把 VPN 配在手机电脑上，或者跑在上级路由上。</li>
+  <li>长期满载时 C5 会明显发热，建议加散热片；摸着烫手就该处理了。</li>
+</ul>
+
+<footer>
+  ESP32 双频中继器 固件 2.2 · 基于 esp-hosted / esp_wifi_remote · 本说明书配套 <code>docs/接线图.svg</code>、<code>docs/操作手册.md</code>
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+-mlongcalls
+-fno-builtin-memcpy
+-fno-builtin-memset
+-fno-builtin-bzero
+"-specs=C:/wifi/frontend2.0/s3_host/build/specs/picolibc.specs"
+-fno-rtti

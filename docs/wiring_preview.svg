@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="100%"
+     font-family="-apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif">
+  <title>ESP32-S3 与 ESP32-C5 接线图（SPI 七线）</title>
+
+  <rect width="1000" height="640" fill="#0e1116"/>
+
+  <text x="40" y="46" font-size="24" font-weight="600" fill="#e7ebf3">ESP32-S3 ⇄ ESP32-C5 接线图</text>
+  <text x="40" y="70" font-size="13" fill="#8d96a8">SPI 七线互联 · 3.3V 电平 · 同名相接，不要交叉 · 线长 ≤ 10cm</text>
+  <text x="960" y="46" font-size="12" fill="#4f8cff" text-anchor="end">固件 2.0</text>
+
+  <!-- ============ S3 板 ============ -->
+  <rect x="50" y="100" width="280" height="400" rx="14" fill="#14212e" stroke="#2f4a63" stroke-width="1.5"/>
+  <text x="70" y="132" font-size="16" font-weight="600" fill="#bfe0ff">ESP32-S3</text>
+  <text x="70" y="152" font-size="12" fill="#7fa3c4">主机 · 2.4G 热点 + NAT + Web</text>
+  <rect x="70" y="164" width="86" height="20" rx="5" fill="#1d3347"/>
+  <text x="113" y="178" font-size="11" fill="#8fb6d8" text-anchor="middle">USB 供电 / COM</text>
+
+  <!-- S3 引脚 -->
+  <g font-size="12" fill="#c9d6e4" text-anchor="end">
+    <text x="324" y="212">GPIO12</text>
+    <text x="324" y="252">GPIO11</text>
+    <text x="324" y="292">GPIO10</text>
+    <text x="324" y="332">GPIO17</text>
+    <text x="324" y="372">GPIO4</text>
+    <text x="324" y="412">GPIO13</text>
+    <text x="324" y="452">GPIO42</text>
+    <text x="324" y="492">GND</text>
+  </g>
+
+  <!-- ============ C5 板 ============ -->
+  <rect x="670" y="100" width="280" height="400" rx="14" fill="#1a2436" stroke="#37456b" stroke-width="1.5"/>
+  <text x="690" y="132" font-size="16" font-weight="600" fill="#cdd8ff">ESP32-C5</text>
+  <text x="690" y="152" font-size="12" fill="#8f9bd0">从机 · 5G / 2.4G 上行</text>
+  <rect x="690" y="164" width="86" height="20" rx="5" fill="#2a3550"/>
+  <text x="733" y="178" font-size="11" fill="#a3aee0" text-anchor="middle">USB 供电 / COM</text>
+
+  <!-- C5 引脚 -->
+  <g font-size="12" fill="#c9d6e4">
+    <text x="690" y="212">GPIO3</text>
+    <text x="690" y="252">GPIO7</text>
+    <text x="690" y="292">GPIO10</text>
+    <text x="690" y="332">GPIO1</text>
+    <text x="690" y="372">GPIO4</text>
+    <text x="690" y="412">GPIO2</text>
+    <text x="690" y="452">EN / RST</text>
+    <text x="690" y="492">GND</text>
+  </g>
+
+  <!-- ============ 七根信号线 ============ -->
+  <!-- CLK -->
+  <line x1="330" y1="208" x2="670" y2="208" stroke="#f5b544" stroke-width="2.5"/>
+  <text x="500" y="196" font-size="13" fill="#f5b544" text-anchor="middle" font-weight="600">CLK</text>
+  <text x="500" y="224" font-size="11" fill="#8d96a8" text-anchor="middle">S3 12 → C5 3</text>
+
+  <!-- MOSI -->
+  <line x1="330" y1="248" x2="670" y2="248" stroke="#4f8cff" stroke-width="2.5"/>
+  <text x="500" y="236" font-size="13" fill="#4f8cff" text-anchor="middle" font-weight="600">MOSI</text>
+  <text x="500" y="264" font-size="11" fill="#8d96a8" text-anchor="middle">S3 11 → C5 7</text>
+
+  <!-- CS -->
+  <line x1="330" y1="288" x2="670" y2="288" stroke="#b07cff" stroke-width="2.5"/>
+  <text x="500" y="276" font-size="13" fill="#b07cff" text-anchor="middle" font-weight="600">CS</text>
+  <text x="500" y="304" font-size="11" fill="#8d96a8" text-anchor="middle">S3 10 → C5 10</text>
+
+  <!-- HANDSHAKE（双向：方向由固件定义） -->
+  <line x1="330" y1="328" x2="670" y2="328" stroke="#ff8f5e" stroke-width="2.5"/>
+  <text x="500" y="316" font-size="13" fill="#ff8f5e" text-anchor="middle" font-weight="600">HANDSHAKE</text>
+  <text x="500" y="344" font-size="11" fill="#8d96a8" text-anchor="middle">S3 17 ↔ C5 1</text>
+
+  <!-- DATA READY -->
+  <line x1="330" y1="368" x2="670" y2="368" stroke="#5ad1e0" stroke-width="2.5"/>
+  <text x="500" y="356" font-size="13" fill="#5ad1e0" text-anchor="middle" font-weight="600">DATA READY</text>
+  <text x="500" y="384" font-size="11" fill="#8d96a8" text-anchor="middle">S3 4 ↔ C5 4</text>
+
+  <!-- MISO -->
+  <line x1="330" y1="408" x2="670" y2="408" stroke="#35d399" stroke-width="2.5"/>
+  <text x="500" y="396" font-size="13" fill="#35d399" text-anchor="middle" font-weight="600">MISO</text>
+  <text x="500" y="424" font-size="11" fill="#8d96a8" text-anchor="middle">C5 2 → S3 13</text>
+
+  <!-- RST -->
+  <line x1="330" y1="448" x2="670" y2="448" stroke="#ff5f6d" stroke-width="2.5"/>
+  <text x="500" y="436" font-size="13" fill="#ff5f6d" text-anchor="middle" font-weight="600">RESET</text>
+  <text x="500" y="464" font-size="11" fill="#8d96a8" text-anchor="middle">S3 42 → C5 EN</text>
+
+  <!-- GND：粗线 -->
+  <line x1="330" y1="488" x2="670" y2="488" stroke="#6b7386" stroke-width="5"/>
+  <text x="500" y="476" font-size="13" fill="#b9c1d1" text-anchor="middle" font-weight="600">GND ×2~3</text>
+
+  <!-- ============ 底部说明 ============ -->
+  <line x1="40" y1="520" x2="960" y2="520" stroke="#252b37" stroke-width="1"/>
+
+  <g font-size="12.5" fill="#8d96a8">
+    <text x="40" y="548">
+      <tspan fill="#e7ebf3" font-weight="600">供电：</tspan>两块板各自用 USB 供电，只共地。不要用一块板的 3V3 给另一块供电（WiFi 发射峰值 300~500mA，会随机重启）。
+    </text>
+    <text x="40" y="572">
+      <tspan fill="#e7ebf3" font-weight="600">走线：</tspan>≤10cm；时钟线两侧最好各有一根地线；杜邦线太长会表现为“能连上但随机丢包”，先把 SPI 降到 10MHz 再排查。
+    </text>
+    <text x="40" y="596">
+      <tspan fill="#e7ebf3" font-weight="600">上电顺序：</tspan>先给 C5，再给 S3。C5 的 GPIO2/3/4 含 strapping 脚，若 C5 起不来，先拔掉这几根线看是否恢复。
+    </text>
+    <text x="40" y="620">
+      <tspan fill="#e7ebf3" font-weight="600">改引脚：</tspan>S3 改 s3_host/sdkconfig.defaults，C5 改 c5_slave/sdkconfig.defaults，两边必须成对修改。
+    </text>
+  </g>
+</svg>

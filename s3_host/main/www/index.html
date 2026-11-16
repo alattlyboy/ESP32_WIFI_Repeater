@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<title>ESP32 双频中继器</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">⇄</div>
+      <div>
+        <h1>ESP32 双频中继器</h1>
+        <p class="sub">C5 收 5G · S3 发 2.4G · 单层 NAT</p>
+      </div>
+    </div>
+    <div id="pill" class="pill">连接中</div>
+  </header>
+
+  <section class="card hero">
+    <div class="hero-top">
+      <div>
+        <div class="label">上行网络</div>
+        <div id="up-ssid" class="big">未配置</div>
+        <div id="up-state" class="muted" style="margin-top:4px">--</div>
+      </div>
+      <div class="signal">
+        <div id="bars" class="bars"><i></i><i></i><i></i><i></i></div>
+        <div id="rssi" class="mono">-- dBm</div>
+      </div>
+    </div>
+    <canvas id="spark" height="64"></canvas>
+    <div class="chips">
+      <span class="chip">频段 <b id="band">--</b></span>
+      <span class="chip">信道 <b id="ch">--</b></span>
+      <span class="chip">上级 IP <b id="ip" class="mono">--</b></span>
+      <span class="chip">NAT <b id="nat">--</b></span>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><span id="clients">0</span><label>客户端</label></div>
+    <div class="stat"><span id="uptime">--</span><label>运行时长</label></div>
+    <div class="stat"><span id="heap">--</span><label>空闲内存</label></div>
+    <div class="stat"><span id="apch">--</span><label>热点信道</label></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>已连接设备</h2><span id="clients-hint" class="muted"></span></div>
+    <ul id="client-list" class="clients"><li class="empty">暂无设备</li></ul>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>选择上行 WiFi</h2><button id="btn-scan" class="btn ghost sm">扫描</button></div>
+    <p id="scan-hint" class="muted">点“扫描”列出附近网络，1~2 秒出结果。扫描时上行会短暂断开，之后自动恢复。</p>
+    <ul id="scan-list" class="scan"></ul>
+  </section>
+
+  <section class="card">
+    <h2>上行设置</h2>
+
+    <div class="grid2">
+      <label class="field"><span>名称 (SSID)</span>
+        <input id="in-ssid" autocomplete="off" placeholder="上级路由 / 校园网的 WiFi 名"></label>
+      <label class="field"><span>频段</span>
+        <select id="in-band">
+          <option value="0">自动（先找 5G 再找 2.4G）</option>
+          <option value="1">只用 2.4GHz</option>
+          <option value="2">只用 5GHz</option>
+        </select></label>
+    </div>
+
+    <label class="field"><span>认证方式</span>
+      <select id="in-auth">
+        <option value="0">密码（WPA2 / WPA3 个人版，家用路由）</option>
+        <option value="1">校园网 / 企业版 802.1X（PEAP、TTLS）</option>
+        <option value="2">开放网络（网页认证 Portal，很多校园网是这种）</option>
+      </select></label>
+
+    <div id="psk-box">
+      <label class="field"><span>上行密码</span>
+        <input id="in-pass" type="password" autocomplete="off" placeholder="不修改请留空"></label>
+    </div>
+
+    <div id="eap-box" hidden>
+      <div class="grid2">
+        <label class="field"><span>EAP 方法</span>
+          <select id="in-eap-method">
+            <option value="0">PEAP（最常见）</option>
+            <option value="1">TTLS</option>
+            <option value="2">TLS（需客户端证书，暂不支持）</option>
+          </select></label>
+        <label class="field"><span>TTLS 内层</span>
+          <select id="in-eap-phase2">
+            <option value="0">MSCHAPv2</option>
+            <option value="1">MSCHAP</option>
+            <option value="2">PAP</option>
+            <option value="3">CHAP</option>
+          </select></label>
+        <label class="field"><span>用户名</span>
+          <input id="in-eap-user" autocomplete="off" placeholder="学号 / 工号"></label>
+        <label class="field"><span>密码</span>
+          <input id="in-eap-pass" type="password" autocomplete="off" placeholder="不修改请留空"></label>
+        <label class="field"><span>匿名身份（可留空）</span>
+          <input id="in-eap-id" autocomplete="off" placeholder="anonymous，多数学校留空即可"></label>
+        <label class="field"><span>服务器证书</span>
+          <select id="in-eap-skip">
+            <option value="1">不校验（校园网自签证书选这个）</option>
+            <option value="0">校验（需要预置 CA）</option>
+          </select></label>
+      </div>
+      <p class="muted">校园网 90% 是 PEAP-MSCHAPv2 + 不校验证书，用户名填学号。</p>
+    </div>
+
+    <div class="grid2" style="margin-top:10px">
+      <label class="field"><span>热点名称</span>
+        <input id="in-ap-ssid" autocomplete="off"></label>
+      <label class="field"><span>热点密码</span>
+        <input id="in-ap-pass" type="password" autocomplete="off" placeholder="不修改请留空（至少 8 位）"></label>
+      <label class="field"><span>热点信道</span>
+        <select id="in-apch"></select></label>
+      <label class="field"><span>DNS</span>
+        <select id="in-dns-mode">
+          <option value="0">跟随上级（推荐）</option>
+          <option value="1">自定义（校园网常用）</option>
+        </select></label>
+    </div>
+
+    <div id="dns-box" class="grid2" hidden>
+      <label class="field"><span>首选 DNS</span>
+        <input id="in-dns1" autocomplete="off" placeholder="223.5.5.5"></label>
+      <label class="field"><span>备用 DNS</span>
+        <input id="in-dns2" autocomplete="off" placeholder="119.29.29.29"></label>
+    </div>
+
+    <button id="btn-save" class="btn primary">保存并重启</button>
+    <p id="msg" class="muted"></p>
+  </section>
+
+  <section class="card danger">
+    <h2>维护</h2>
+    <div class="row">
+      <button id="btn-reboot" class="btn ghost">重启设备</button>
+      <button id="btn-factory" class="btn red">恢复出厂</button>
+    </div>
+    <p class="muted">也可以长按板载 BOOT 键 5 秒恢复出厂。</p>
+  </section>
+
+  <footer><span id="fw" class="mono">fw --</span> · 企业版 802.1X · SPI 互联</footer>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
